@@ -35,7 +35,10 @@ def split(file_array, row_limit=1024):
     return result_list
 
 
-def split_individual_file(file_array, row_limit=1024, column="X097_DE_time"):
+def split_individual_file(file_array, row_limit=1024, column_name="DE"):
+    for elem in file_array.keys():
+        if elem.__contains__(column_name):
+            column = elem
     column_dataset = file_array[column]
     result = np.array_split(column_dataset, math.floor(column_dataset.shape[0] / row_limit))
     return result
@@ -94,7 +97,6 @@ def save_matrix_list_to_images(matrix_list, folder, prefix_name):
         #fig.add_axes(ax)
         #plt.imshow(element)
         #plt.savefig(folder + '/{0}_fig{1}.png'.format(prefix_name, str(index))
-
         # plt.savefig("./test/output_{0}.png".format(str(index)), bbox_inches='tight')
         index += 1
 
@@ -124,63 +126,50 @@ def process_bunch_files():
     binary_matrix_list = create_binary_matrix(full_matrix_distance, 0.05)
     save_matrix_list_to_images(binary_matrix_list, directory)
 
-
-def process_individual_file(input_file, output_folder, column="X097_DE_time", name_prexix= ""):
+def process_individual_file(input_file, output_folder, column="DE", name_prexix= "", row_limit=128, epsylon=0.05, distance_matrix=2):
     if os.path.exists(output_folder):
         shutil.rmtree(output_folder)
     os.makedirs(output_folder)
     file_loaded = load_file(input_file)
-    splitted_file = split_individual_file(file_loaded, row_limit=128, column=column) #need to send column, probably will have to get it from filename
-    full_matrix_distance = create_matrix_distance_for_file(2, splitted_file)
-    plt.plot(splitted_file[4])
-    plt.show()
-    binary_matrix_list = create_binary_matrix_for_file(full_matrix_distance, 0.05)
+    splitted_file = split_individual_file(file_loaded, row_limit=row_limit, column_name=column) #need to send column, probably will have to get it from filename
+    full_matrix_distance = create_matrix_distance_for_file(distance_matrix, splitted_file)
+    binary_matrix_list = create_binary_matrix_for_file(full_matrix_distance, epsylon)
     save_matrix_list_to_images(binary_matrix_list, output_folder, name_prexix)
 
 
 
 
-def process_all():
-    for root, dirs, files in os.walk("/Users/lisandro/Downloads/engine_data", topdown=False):
+def process_all(main_folder="/Users/lisandro/Downloads/engine_data", data_type="DE", points_per_file=1024, epsylon=0.5, distance_point=2, points_per_distance=2):
+    for root, dirs, files in os.walk(main_folder, topdown=False):
         for file_name in files:
             if file_name.endswith('.mat'):
                 folder = os.path.join(root, os.path.splitext(file_name)[0])
                 if os.path.exists(folder):
                     shutil.rmtree(folder)
                 os.makedirs(folder)
-                process_individual_file(file_name, folder)
+                if folder.__contains__("inner_race"):
+                    prefix= 'innerrace'
+                else:
+                    if folder.__contains__("baseline"):
+                        prefix = 'baseline'
+                    else:
+                        prefix='ball'
+                if folder.__contains__("DE"):
+                    data_type="DE"
+                else:
+                    if folder.__contains__("FE"):
+                        data_type="FE"
+                    else:
+                        os.makedirs(folder+ "FE")
+                        process_individual_file(root + file_name, folder + "FE", data_type, prefix, points_per_file, epsylon,
+                                                distance_point)
+                        os.makedirs(folder + "DE")
+                        data_type = "DE"
 
+                process_individual_file(root + "/" + file_name, folder, data_type, prefix, points_per_file, epsylon, distance_point)
 
-
+process_all()
 #process_individual_file("/Users/lisandro/Downloads/engine_data/baseline/baseline_hp_0_rpm_1797.mat", "/Users/lisandro/Downloads/engine_data/baseline/baseline_hp_0_rpm_1797", "X097_DE_time", "baseline")
 #process_individual_file("/Users/lisandro/Downloads/engine_data/DE_fault/DE_fault_007_hp_0_rpm_1797_ball.mat", "/Users/lisandro/Downloads/engine_data/DE_fault/DE_fault_007_hp_0_rpm_1797_ball", "X118_DE_time", "ball")
-process_individual_file("/Users/lisandro/Downloads/engine_data/DE_fault/DE_fault_007_hp_0_rpm_1797_inner_race.mat", "/Users/lisandro/Downloads/engine_data/DE_fault/DE_fault_007_hp_0_rpm_1797_inner_race", "X105_DE_time", "innerrace")
-
-
-#process_individual_file("/Users/lisandro/Downloads/engine_data/baseline/baseline_hp_0_rpm_1797.mat", "/Users/lisandro/Downloads/engine_data/baseline/baseline_hp_0_rpm_1797", "X097_DE_time", "baseline")
-#process_individual_file("/Users/lisandro/Downloads/engine_data/DE_fault/DE_fault_014_hp_0_rpm_1797_ball.mat", "/Users/lisandro/Downloads/engine_data/DE_fault/DE_fault_014_hp_0_rpm_1797_ball", "X185_DE_time", "ball")
-#process_individual_file("/Users/lisandro/Downloads/engine_data/DE_fault/DE_fault_014_hp_0_rpm_1797_inner_race.mat", "/Users/lisandro/Downloads/engine_data/DE_fault/DE_fault_014_hp_0_rpm_1797_inner_race", "X169_DE_time", "innerrace")
-
-
-
-#process_individual_file("/Users/lisandro/Downloads/engine_data/baseline/baseline_hp_0_rpm_1797.mat", "/Users/lisandro/Downloads/engine_data/baseline/baseline_hp_0_rpm_1797", "X097_DE_time", "baseline")
-#process_individual_file("/Users/lisandro/Downloads/engine_data/DE_fault/DE_fault_021_hp_0_rpm_1797_ball.mat", "/Users/lisandro/Downloads/engine_data/DE_fault/DE_fault_021_hp_0_rpm_1797_ball", "X222_DE_time", "ball")
-#process_individual_file("/Users/lisandro/Downloads/engine_data/DE_fault/DE_fault_021_hp_0_rpm_1797_inner_race.mat", "/Users/lisandro/Downloads/engine_data/DE_fault/DE_fault_021_hp_0_rpm_1797_inner_race", "X209_DE_time", "innerrace")
-
-
-#process_individual_file("/Users/lisandro/Downloads/engine_data/baseline/baseline_hp_0_rpm_1797.mat", "/Users/lisandro/Downloads/engine_data/baseline/baseline_hp_0_rpm_1797", "X097_DE_time", "baseline")
-#process_individual_file("/Users/lisandro/Downloads/engine_data/DE_fault/DE_fault_028_hp_0_rpm_1797_ball.mat", "/Users/lisandro/Downloads/engine_data/DE_fault/DE_fault_028_hp_0_rpm_1797_ball", "X048_DE_time", "ball")
-#process_individual_file("/Users/lisandro/Downloads/engine_data/DE_fault/DE_fault_028_hp_0_rpm_1797_inner_race.mat", "/Users/lisandro/Downloads/engine_data/DE_fault/DE_fault_028_hp_0_rpm_1797_inner_race", "X056_DE_time", "innerrace")
-
-
-
-#process_individual_file("/Users/lisandro/Downloads/engine_data/baseline/baseline_hp_1_rpm_1772.mat", "/Users/lisandro/Downloads/engine_data/baseline/baseline_hp_1_rpm_1772", "X098_DE_time", "baseline")
-#process_individual_file("/Users/lisandro/Downloads/engine_data/DE_fault/DE_fault_007_hp_1_rpm_1772_ball.mat", "/Users/lisandro/Downloads/engine_data/DE_fault/DE_fault_007_hp_1_rpm_1772_ball", "X119_DE_time", "ball")
-#process_individual_file("/Users/lisandro/Downloads/engine_data/DE_fault/DE_fault_007_hp_1_rpm_1772_inner_race.mat", "/Users/lisandro/Downloads/engine_data/DE_fault/DE_fault_007_hp_1_rpm_1772_inner_race", "X106_DE_time", "innerrace")
-
-
-
-#process_individual_file("/Users/lisandro/Downloads/engine_data/baseline/baseline_hp_0_rpm_1797.mat", "/Users/lisandro/Downloads/engine_data/baseline/baseline_hp_0_rpm_1797", "X097_FE_time", "baseline")
-#process_individual_file("/Users/lisandro/Downloads/engine_data/FE_fault/FE_fault_007_hp_0_rpm_1797_ball.mat", "/Users/lisandro/Downloads/engine_data/FE_fault/FE_fault_007_hp_0_rpm_1797_ball", "X282_FE_time", "ball")
-#process_individual_file("/Users/lisandro/Downloads/engine_data/FE_fault/FE_fault_007_hp_0_rpm_1797_inner_race.mat", "/Users/lisandro/Downloads/engine_data/FE_fault/FE_fault_007_hp_0_rpm_1797_inner_race", "X278_FE_time", "innerrace")
+#process_individual_file("/Users/lisandro/Downloads/engine_data/DE_fault/DE_fault_007_hp_0_rpm_1797_inner_race.mat", "/Users/lisandro/Downloads/engine_data/DE_fault/DE_fault_007_hp_0_rpm_1797_inner_race", "X105_DE_time", "innerrace",128)
 
